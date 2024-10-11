@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import { compare, hash } from "bcrypt";
 import jwt from "jsonwebtoken";
 import User from "../models/user.model";
+import Subscription from "../models/subscription.model";
+import mongoose from "mongoose";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "my-secret";
 
@@ -43,6 +45,7 @@ export async function register(req: Request, resp: Response): Promise<void> {
     const hashPassword = await hash(password, 10);
 
     const newUser = await new User({ username, password: hashPassword }).save();
+
     const token = generateToken({
       _id: newUser._id as string,
       username,
@@ -101,6 +104,127 @@ export async function changePassword(
   } catch (err) {
     console.log("change password error", { err });
     resp.status(500).json({ message: "internal server error" });
+  }
+}
+
+export async function getUser(req: Request, resp: Response): Promise<void> {
+  try {
+    const userId: string = req.params.id as string;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      resp.status(400).json({ message: "Invalid user ID format" });
+      return;
+    }
+
+    const user = await User.findOne({ _id: userId });
+
+    if (!user) {
+      resp.status(404).json({ message: "user not found" });
+      return;
+    }
+
+    resp.status(200).json({
+      username: user.username,
+      _id: user._id,
+      followerCount: user.followerCount,
+    });
+  } catch (err) {
+    console.log("get user error", { err });
+    resp.status(500).json({ message: "internal server error" });
+  }
+}
+
+export async function subscribe(req: Request, resp: Response): Promise<void> {
+  try {
+    console.log("subscribe test", req.context);
+    const subscriberId: string = req.context.userData?._id as string;
+    const subscribedToId: string = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(subscribedToId)) {
+      resp.status(400).json({ message: "Invalid user ID format" });
+      return;
+    }
+
+    const subscribeTo = await User.findOne({ _id: subscribedToId });
+    if (!subscribeTo) {
+      resp
+        .status(400)
+        .json({ message: "cannot subscribe to a non existing user" });
+      return;
+    }
+
+    await new Subscription({
+      subscribedToId,
+      subscriberId,
+    }).save();
+
+    const updatedUser = await User.findByIdAndUpdate(
+      subscribeTo._id,
+      { $inc: { followerCount: 1 } },
+      { new: true },
+    );
+
+    if (!updatedUser) {
+      resp
+        .status(400)
+        .json({ message: "cannot subscribe to a non existing user" });
+      return;
+    }
+
+    resp.status(200).json({
+      subscribedTo: {
+        username: updatedUser.username,
+        _id: updatedUser._id,
+        followerCount: updatedUser.followerCount,
+      },
+      message: "success",
+    });
+    return;
+  } catch (err: any) {
+    console.log("subscribe error", { err });
+    if (err.code === 11000) {
+      resp
+        .status(409)
+        .json({ message: "You are already subscribed to this user" });
+    } else {
+      resp.status(500).json({ message: "internal server error" });
+    }
+  }
+}
+
+export async function unsubscribe(req: Request, resp: Response): Promise<void> {
+  try {
+    const subscriberId: string = req.context.userData?._id as string;
+    const subscribedToId: string = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(subscribedToId)) {
+      resp.status(400).json({ message: "Invalid user ID format" });
+      return;
+    }
+
+    const subscription = await Subscription.findOneAndDelete({
+      subscribedToId,
+      subscriberId,
+    });
+
+    if (!subscription) {
+      resp.status(404).json({ message: "You are not subscribed to this user" });
+      return;
+    }
+
+    await User.findByIdAndUpdate(
+      subscribedToId,
+      { $inc: { followerCount: -1 } },
+      { new: true },
+    );
+
+    resp.status(200).json({
+      message: "success",
+    });
+    return;
+  } catch (err) {
+    console.log("Unsubscribe error", { err });
+    resp.status(500).json({ message: "Internal server error" });
   }
 }
 

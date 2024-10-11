@@ -6,6 +6,7 @@ info:
 
 servers:
   - url: http://localhost:80
+
 components:
   schemas:
     Username:
@@ -49,8 +50,44 @@ components:
           $ref: '#/components/schemas/Password'
         newPassword:
           $ref: '#/components/schemas/Password'
+    UnsubscribeResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      example:
+        message: "Unsubscribed successfully"
 
 paths:
+  /users/{id}:
+    get:
+      summary: Retrieve user details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the user
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User details and follower count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  username:
+                    type: string
+                  followerCount:
+                    type: integer
+                  totalEarnings:
+                    type: integer
+              example:
+                username: gawrgura
+                followerCount: 100
+                totalEarnings: 500
+
   /users/register:
     post:
       summary: Register a new user
@@ -118,3 +155,32 @@ paths:
                     type: string
               example:
                 message: "success"
+
+  /users/{id}/unsubscribe:
+    delete:
+      summary: Unsubscribe from another user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the user to unsubscribe from
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Unsubscription success message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnsubscribeResponse'
+        '404':
+          description: User not found or not subscribed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: "User not found or not subscribed"
