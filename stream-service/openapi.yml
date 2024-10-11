@@ -1,0 +1,71 @@
+openapi: 3.0.0
+info:
+  title: Stream Service API
+  version: 1.0.0
+  description: API for managing live streams, including retrieving active streams and creating new streams.
+
+paths:
+  /streams/:
+    get:
+      summary: Get current active streams
+      parameters:
+        - name: Token
+          in: header
+          required: true
+          description: Authentication token
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of current active streams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    streamId:
+                      type: string
+                    username:
+                      type: string
+                    currentWatcherCount:
+                      type: integer
+                example:
+                  - streamId: "ASDASDASDS"
+                    username: "GawrGura"
+                    currentWatcherCount: 100
+                  - streamId: "ASDAASSDASDS"
+                    username: "Pekora"
+                    currentWatcherCount: 100
+    post:
+      summary: Create a new stream
+      parameters:
+        - name: Token
+          in: header
+          required: true
+          description: Authentication token
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Stream creation response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      streamId:
+                        type: string
+                      message:
+                        type: string
+                    example:
+                      streamId: "ASDASDASDS"
+                      message: "success"
+                  - type: object
+                    properties:
+                      message:
+                        type: string
+                    example:
+                      message: "fail, can only make 1 active stream at a time"

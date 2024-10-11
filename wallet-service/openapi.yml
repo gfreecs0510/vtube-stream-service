@@ -1,0 +1,107 @@
+openapi: 3.0.0
+info:
+  title: Wallet Service API
+  version: 1.0.0
+  description: API for managing user wallets, including balance retrieval, top-up, and gift purchases.
+
+paths:
+  /users/{id}/wallet:
+    get:
+      summary: Get user wallet balance
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the user
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User's total remaining tokens
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalRemainingTokens:
+                    type: integer
+              example:
+                totalRemainingTokens: 500
+
+  /topup:
+    post:
+      summary: Add tokens to user wallet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: integer
+                  example: 500  # USD amount
+              required:
+                - amount
+      responses:
+        '200':
+          description: Total remaining tokens after top-up
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalRemainingTokens:
+                    type: integer
+              example:
+                totalRemainingTokens: 5000
+
+  /buyGift:
+    post:
+      summary: Deduct tokens to purchase a virtual gift
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                streamId:
+                  type: string
+                gift:
+                  type: string
+                count:
+                  type: integer
+                tokenCost:
+                  type: integer
+              required:
+                - streamId
+                - gift
+                - count
+                - tokenCost
+      responses:
+        '200':
+          description: Purchase success with remaining tokens
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalRemainingTokens:
+                    type: integer
+                  message:
+                    type: string
+              example:
+                totalRemainingTokens: 5
+                message: "success"
+        '400':
+          description: Not enough tokens to complete the purchase
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: "not enough token"

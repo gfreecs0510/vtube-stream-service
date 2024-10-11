@@ -1,0 +1,131 @@
+openapi: 3.0.0
+info:
+  title: User Service API
+  version: 1.0.0
+  description: API for user management, including user details, signup, login, and subscriptions.
+
+paths:
+  /users/{id}:
+    get:
+      summary: Retrieve user details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the user
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User details and follower count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  username:
+                    type: string
+                  followerCount:
+                    type: integer
+              example:
+                username: gawrgura
+                followerCount: 100
+
+  /signup:
+    post:
+      summary: User signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+                emailAddress:
+                  type: string
+                  format: email
+                name:
+                  type: string
+                address:
+                  type: string
+                contactNumber:
+                  type: string
+              required:
+                - username
+                - password
+                - emailAddress
+                - name
+                - address
+                - contactNumber
+      responses:
+        '200':
+          description: Signup success message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: "success"
+
+  /login:
+    post:
+      summary: User login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+              required:
+                - username
+                - password
+      responses:
+        '200':
+          description: Login success message with token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  message:
+                    type: string
+              example:
+                token: "123123123"
+                message: "success"
+
+  /users/{id}/subscribe:
+    post:
+      summary: Subscribe to another user (streamer)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the user to subscribe
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Subscription success message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: "success"

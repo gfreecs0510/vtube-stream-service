@@ -1,0 +1,83 @@
+openapi: 3.0.0
+info:
+  title: Gift Service API
+  version: 1.0.0
+  description: API for managing gifts received by streamers and converting gifts to gold.
+
+paths:
+  /users/{id}/gifts:
+    get:
+      summary: Retrieve all gifts received by a streamer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the user (streamer)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of gifts received by the streamer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    gift:
+                      type: string
+                    count:
+                      type: integer
+                example:
+                  - gift: "Donut"
+                    count: 10000
+                  - gift: "Robot"
+                    count: 10000
+
+  /users/{id}/gifts/convertToGold:
+    post:
+      summary: Convert gifts to gold
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the user (streamer)
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                gift:
+                  type: string
+                count:
+                  type: integer
+              required:
+                - gift
+                - count
+      responses:
+        '200':
+          description: Remaining gift count and total remaining gold after conversion
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  remainingGift:
+                    type: object
+                    properties:
+                      gift:
+                        type: string
+                      count:
+                        type: integer
+                  totalRemainingGold:
+                    type: integer
+                example:
+                  remainingGift:
+                    gift: "Donut"
+                    count: 0
+                  totalRemainingGold: 5
