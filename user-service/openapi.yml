@@ -4,108 +4,97 @@ info:
   version: 1.0.0
   description: API for user management, including user details, signup, login, and subscriptions.
 
+servers:
+  - url: http://localhost:80
+components:
+  schemas:
+    Username:
+      type: string
+      format: email
+      description: Must be a valid email address.
+    Password:
+      type: string
+      pattern: '^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])(?=.*\S).{10,72}$'
+      description: Password must be between 10 and 72 characters, contain at least one uppercase letter, one digit, one special character, and no spaces.
+    RegisterRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          $ref: '#/components/schemas/Username'
+        password:
+          $ref: '#/components/schemas/Password'
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          $ref: '#/components/schemas/Username'
+        password:
+          $ref: '#/components/schemas/Password'
+    ChangePasswordRequest:
+      type: object
+      required:
+        - username
+        - oldPassword
+        - newPassword
+      properties:
+        username:
+          $ref: '#/components/schemas/Username'
+        oldPassword:
+          $ref: '#/components/schemas/Password'
+        newPassword:
+          $ref: '#/components/schemas/Password'
+
 paths:
-  /users/{id}:
-    get:
-      summary: Retrieve user details
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: The ID of the user
-          schema:
-            type: string
-      responses:
-        '200':
-          description: User details and follower count
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  username:
-                    type: string
-                  followerCount:
-                    type: integer
-              example:
-                username: gawrgura
-                followerCount: 100
-
-  /signup:
+  /users/register:
     post:
-      summary: User signup
+      summary: Register a new user
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                username:
-                  type: string
-                password:
-                  type: string
-                emailAddress:
-                  type: string
-                  format: email
-                name:
-                  type: string
-                address:
-                  type: string
-                contactNumber:
-                  type: string
-              required:
-                - username
-                - password
-                - emailAddress
-                - name
-                - address
-                - contactNumber
+              $ref: '#/components/schemas/RegisterRequest'
       responses:
-        '200':
-          description: Signup success message
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-              example:
-                message: "success"
+        '201':
+          description: User registered successfully
+        '400':
+          description: Invalid input
 
-  /login:
+  /users/login:
     post:
-      summary: User login
+      summary: Login a user
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                username:
-                  type: string
-                password:
-                  type: string
-              required:
-                - username
-                - password
+              $ref: '#/components/schemas/LoginRequest'
       responses:
         '200':
-          description: Login success message with token
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  token:
-                    type: string
-                  message:
-                    type: string
-              example:
-                token: "123123123"
-                message: "success"
+          description: User logged in successfully
+        '400':
+          description: Invalid credentials
+
+  /users/changePassword:
+    patch:
+      summary: Change user's password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Password changed successfully
+        '400':
+          description: Invalid input or incorrect old password
 
   /users/{id}/subscribe:
     post:

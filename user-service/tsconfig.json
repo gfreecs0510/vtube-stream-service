@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2020", // Set the JavaScript target version
+    "module": "commonjs", // CommonJS module system for Node.js
+    "outDir": "./dist", // Directory to output compiled files
+    "rootDir": "./src", // Root directory of your source files
+    "esModuleInterop": true, // Enable compatibility with CommonJS modules
+    "skipLibCheck": true, // Skip type checking of declaration files
+    "forceConsistentCasingInFileNames": true, // Ensure consistent casing in file names
+    "baseUrl": ".", // Base directory for non-relative module names
+    "paths": {
+      "*": ["node_modules/*"] // Resolve packages from node_modules
+    },
+    "typeRoots": ["./node_modules/@types", "./src/types"],
+    "strict": true, // Enable all strict type-checking options
+    "noImplicitAny": true, // Raise an error on expressions and declarations with an implied 'any' type
+    "alwaysStrict": true, // Parse in strict mode and emit "use strict" for each file
+    "strictFunctionTypes": true, // Ensure function parameter bivariance
+    "strictPropertyInitialization": true, // Ensure non-null assertions are used for class properties
+    "noImplicitReturns": true, // Ensure that all code paths in a function return a value
+    "noImplicitThis": true // Ensure 'this' is always typed
+  },
+  "include": ["src/**/*"], // Include all files in the src directory
+  "exclude": ["node_modules", "dist"] // Exclude these directories
+}

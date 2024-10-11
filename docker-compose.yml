@@ -1,30 +1,12 @@
 version: '3.8'
 
 services:
-  postgreSQL:
-    image: postgres
-    restart: always
-    shm_size: 128mb
+  mongodb:
+    image: mongo
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: password
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U root"]
-      interval: 30s          # Time between checks
-      timeout: 10s           # Time to wait for the check to complete
-      retries: 5             # Number of retries before marking as unhealthy
-      start_period: 10s      # Time to wait before starting the health checks
-
-  adminer:
-    image: adminer
-    restart: always
-    ports:
-      - 8080:8080
-  #TODO : will implement later
-  #dynamoDB: 
-  #redis:
+      - mongodb_data:/data/db
+    env_file:
+      - ./localEnv/mongodb.env
 
   user:
     build:
@@ -35,44 +17,7 @@ services:
     env_file:
       - ./localEnv/user-service.env
     depends_on:
-      postgreSQL:
-        condition: service_healthy
-      #redis:
-        #condition: service_healthy
-
-  wallet:
-    build:
-      context: ./wallet-service
-      dockerfile: Dockerfile
-    ports:
-      - 80:3001
-    env_file:
-      - ./localEnv/wallet-service.env
-    depends_on:
-      - user
-
-  gift:
-    build:
-      context: ./gift-service
-      dockerfile: Dockerfile
-    ports:
-      - 80:3002
-    env_file:
-      - ./localEnv/gift-service.env
-    depends_on:
-      - wallet
-
-  stream:
-    build:
-      context: ./stream-service
-      dockerfile: Dockerfile
-    ports:
-      - 80:3003
-    env_file:
-      - ./localEnv
-    depends_on:
-      - gift
-      #dynamoDB
+      - mongodb
 
 volumes:
-  postgres_data:
+  mongodb_data:

@@ -46,3 +46,7 @@ they can send gifts during stream as well all of them in real time.
 will use typescript/express for user, wallet, gift service (these are all http api), and also will use postgreSQL
 stream service will be written in go (both api and websocket), this will also DynamoDB
 everything will be dockerize of course
+
+# to run locally
+
+docker-compose up
