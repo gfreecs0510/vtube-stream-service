@@ -112,7 +112,7 @@ export async function getUser(req: Request, resp: Response): Promise<void> {
     const userId: string = req.params.id as string;
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
-      resp.status(400).json({ message: "Invalid user ID format" });
+      resp.status(400).json({ message: "invalid user ID format" });
       return;
     }
 
@@ -136,12 +136,16 @@ export async function getUser(req: Request, resp: Response): Promise<void> {
 
 export async function subscribe(req: Request, resp: Response): Promise<void> {
   try {
-    console.log("subscribe test", req.context);
     const subscriberId: string = req.context.userData?._id as string;
     const subscribedToId: string = req.params.id;
 
     if (!mongoose.Types.ObjectId.isValid(subscribedToId)) {
-      resp.status(400).json({ message: "Invalid user ID format" });
+      resp.status(400).json({ message: "invalid user ID format" });
+      return;
+    }
+
+    if (subscriberId === subscribedToId) {
+      resp.status(400).json({ message: "cannot subscribe to itself" });
       return;
     }
 
@@ -198,7 +202,12 @@ export async function unsubscribe(req: Request, resp: Response): Promise<void> {
     const subscribedToId: string = req.params.id;
 
     if (!mongoose.Types.ObjectId.isValid(subscribedToId)) {
-      resp.status(400).json({ message: "Invalid user ID format" });
+      resp.status(400).json({ message: "invalid user ID format" });
+      return;
+    }
+
+    if (subscriberId === subscribedToId) {
+      resp.status(400).json({ message: "cannot unsubscribe to itself" });
       return;
     }
 
@@ -208,7 +217,7 @@ export async function unsubscribe(req: Request, resp: Response): Promise<void> {
     });
 
     if (!subscription) {
-      resp.status(404).json({ message: "You are not subscribed to this user" });
+      resp.status(404).json({ message: "you are not subscribed to this user" });
       return;
     }
 
@@ -224,7 +233,7 @@ export async function unsubscribe(req: Request, resp: Response): Promise<void> {
     return;
   } catch (err) {
     console.log("Unsubscribe error", { err });
-    resp.status(500).json({ message: "Internal server error" });
+    resp.status(500).json({ message: "internal server error" });
   }
 }
 

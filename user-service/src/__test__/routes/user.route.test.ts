@@ -4,6 +4,7 @@ import router from "../../routes/user.route";
 import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import bcrypt from "bcrypt";
+import User from "../../models/user.model";
 
 const app = express();
 app.use(express.json());
@@ -11,8 +12,11 @@ app.use(router);
 
 describe("User routes", () => {
   const mockUsername = "user@example.com";
+  const mockUsernameForSub = "usersub@example.com";
   const mockPassword = "Valid1@password";
+  const mockNewPassword = "NewValid1@password";
   let mongoServer: MongoMemoryServer;
+  let token: string;
 
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
@@ -334,12 +338,23 @@ describe("User routes", () => {
   });
 
   describe("PUT /changePassword", () => {
+    let token: string;
+    beforeAll(async () => {
+      const response = await request(app)
+        .post("/login")
+        .send({ username: mockUsername, password: mockPassword });
+      token = response.body.token;
+    });
+
     it("should return 200 for valid request", async () => {
-      const response = await request(app).patch("/changePassword").send({
-        username: mockUsername,
-        oldPassword: mockPassword,
-        newPassword: "NewValid1@password",
-      });
+      const response = await request(app)
+        .patch("/changePassword")
+        .set("token", token)
+        .send({
+          username: mockUsername,
+          oldPassword: mockPassword,
+          newPassword: mockNewPassword,
+        });
 
       expect(response.status).toBe(200);
       expect(response.body.message).toBe("success");
@@ -596,6 +611,7 @@ describe("User routes", () => {
         }) => {
           const response = await request(app)
             .patch("/changePassword")
+            .set("token", token)
             .send(requestBody);
 
           expect(response.status).toBe(expectedStatus ?? 400);
@@ -618,14 +634,226 @@ describe("User routes", () => {
         jest.spyOn(bcrypt, "compare").mockImplementationOnce(() => {
           throw new Error("compare crash");
         });
-        const response = await request(app).patch("/changePassword").send({
-          username: mockUsername,
-          oldPassword: mockPassword,
-          newPassword: "NewValid1@password",
-        });
+        const response = await request(app)
+          .patch("/changePassword")
+          .set("token", token)
+          .send({
+            username: mockUsername,
+            oldPassword: mockPassword,
+            newPassword: mockNewPassword,
+          });
 
         expect(response.status).toBe(500);
         expect(response.body.message).toBe("internal server error");
+      });
+    });
+  });
+
+  describe("GET /:id", () => {
+    it("should return 200 and the info of the user", async () => {
+      const user = await User.findOne({ username: mockUsername });
+
+      const response = await request(app).get(`/${user?._id}`).send();
+
+      expect(response.status).toBe(200);
+      expect(response.body.username).toEqual(user?.username);
+      expect(response.body._id).toEqual(user?._id?.toString());
+      expect(response.body.followerCount).toEqual(user?.followerCount);
+    });
+
+    describe("Failed get user", () => {
+      it.each([
+        {
+          description: "user does not exist",
+          userId: "6527ed7b9b0a1a3c9b0d02a5",
+          expectedStatusCode: 404,
+          expectedMessage: "user not found",
+        },
+        {
+          description: "user id format is invalid",
+          userId: "abc123",
+          expectedStatusCode: 400,
+          expectedMessage: "invalid user ID format",
+        },
+      ])(
+        "should return $expectedStatusCode when $description",
+        async ({ userId, expectedStatusCode, expectedMessage }) => {
+          const response = await request(app).get(`/${userId}`).send();
+
+          expect(response.status).toBe(expectedStatusCode);
+          expect(response.body.message).toEqual(expectedMessage);
+        },
+      );
+    });
+
+    describe("Error handling", () => {
+      it("should return 500 when server error occurs", async () => {
+        jest.spyOn(User, "findOne").mockImplementationOnce(() => {
+          throw new Error("Fail on findOne");
+        });
+
+        const response = await request(app)
+          .get(`/6527ed7b9b0a1a3c9b0d02a5`)
+          .send();
+
+        expect(response.status).toBe(500);
+        expect(response.body.message).toEqual("internal server error");
+      });
+    });
+  });
+
+  describe("Subscribe/Unsubscribe", () => {
+    let token: string;
+    let currentUser: any;
+    let newUser: any;
+    beforeAll(async () => {
+      let response = await request(app)
+        .post("/login")
+        .send({ username: mockUsername, password: "NewValid1@password" });
+
+      token = response.body.token;
+      await request(app)
+        .post("/register")
+        .send({ username: mockUsernameForSub, password: mockPassword });
+      currentUser = await User.findOne({ username: mockUsername });
+      newUser = await User.findOne({ username: mockUsernameForSub });
+    });
+
+    describe("POST /:id/subscribe", () => {
+      it("should return 200 when it successfully subscribe to a new user", async () => {
+        const response = await request(app)
+          .post(`/${newUser._id}/subscribe`)
+          .set("token", token)
+          .send();
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({
+          subscribedTo: {
+            username: newUser.username,
+            _id: newUser._id.toString(),
+            followerCount: newUser.followerCount + 1,
+          },
+          message: "success",
+        });
+      });
+
+      describe("Failed subscribe", () => {
+        it.each([
+          {
+            description: "trying to subscribe to itself",
+            userId: () => currentUser?._id.toString(),
+            expectedStatusCode: 400,
+            expectedMessage: "cannot subscribe to itself",
+          },
+          {
+            description: "user id format is invalid",
+            userId: () => "abc123",
+            expectedStatusCode: 400,
+            expectedMessage: "invalid user ID format",
+          },
+          {
+            description: "user does not exist",
+            userId: () => "6527ed7b9b0a1a3c9b0d02a5",
+            expectedStatusCode: 400,
+            expectedMessage: "cannot subscribe to a non existing user",
+          },
+        ])(
+          "should return $expectedStatusCode when $description",
+          async ({ userId, expectedStatusCode, expectedMessage }) => {
+            const response = await request(app)
+              .post(`/${userId()}/subscribe`)
+              .set("token", token)
+              .send();
+
+            expect(response.status).toBe(expectedStatusCode);
+            expect(response.body.message).toBe(expectedMessage);
+          },
+        );
+      });
+
+      describe("Error handling", () => {
+        it("should return 500 when server error occured", async () => {
+          jest.spyOn(User, "findOne").mockImplementationOnce(() => {
+            throw new Error("Server error");
+          });
+
+          const response = await request(app)
+            .post(`/${newUser._id}/subscribe`)
+            .set("token", token)
+            .send();
+
+          expect(response.status).toBe(500);
+          expect(response.body.message).toEqual("internal server error");
+        });
+      });
+    });
+
+    describe("DELETE /:id/unsubscribe", () => {
+      it("should return 200 when it successfully unsubscribe", async () => {
+        const response = await request(app)
+          .delete(`/${newUser._id}/unsubscribe`)
+          .set("token", token)
+          .send();
+
+        console.log("response.body", response.body);
+        expect(response.status).toBe(200);
+        expect(response.body.message).toEqual("success");
+      });
+
+      describe("Failed unsubscribe", () => {
+        it.each([
+          {
+            description: "trying to unsubscribe to itself",
+            userId: () => currentUser?._id.toString(),
+            expectedStatusCode: 400,
+            expectedMessage: "cannot unsubscribe to itself",
+          },
+          {
+            description: "user id format is invalid",
+            userId: () => "abc123",
+            expectedStatusCode: 400,
+            expectedMessage: "invalid user ID format",
+          },
+          {
+            description: "unsubscribing ",
+            userId: () => "6527ed7b9b0a1a3c9b0d02a5",
+            expectedStatusCode: 404,
+            expectedMessage: "you are not subscribed to this user",
+          },
+        ])(
+          "should return $expectedStatusCode when $description",
+          async ({ userId, expectedStatusCode, expectedMessage }) => {
+            const response = await request(app)
+              .delete(`/${userId()}/unsubscribe`)
+              .set("token", token)
+              .send();
+
+            expect(response.status).toBe(expectedStatusCode);
+            expect(response.body.message).toBe(expectedMessage);
+          },
+        );
+      });
+
+      describe("Error handling", () => {
+        it("should return 500 when server error occured", async () => {
+          //subscribe first
+          await request(app)
+            .post(`/${newUser._id}/subscribe`)
+            .set("token", token)
+            .send();
+
+          jest.spyOn(User, "findByIdAndUpdate").mockImplementationOnce(() => {
+            throw new Error("Server error");
+          });
+
+          const response = await request(app)
+            .delete(`/${newUser._id}/unsubscribe`)
+            .set("token", token)
+            .send();
+
+          expect(response.status).toBe(500);
+          expect(response.body.message).toEqual("internal server error");
+        });
       });
     });
   });
